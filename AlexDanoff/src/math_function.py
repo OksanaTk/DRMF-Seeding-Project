@@ -1,7 +1,5 @@
 import math_mode
 import string
-from utilities import readin
-from utilities import writeout
 import re
 
 def math_string(file):
@@ -9,6 +7,7 @@ def math_string(file):
     string = open(file).read()
     output = []
     ranges = math_mode.find_math_ranges(string)
+    #print ranges
     for i in ranges:
         new = string[i[0]:i[1]]
         output.append(new)
@@ -27,24 +26,55 @@ def change_original(o_file, changed_math_string):
     return edited
 
 
-def index_spacing(file, out_file):
-    used = open(file).read()
+def formatting(file_str):
+    # Proper spacing for the indexes and gets rid of all non beginEq endEq text
 
     updated = []
     IND_START = r'\index{'
     ind_str = ""
     in_ind = False
     previous = ""
-    lines = used.split("\n")
+
+    ranges = math_mode.find_math_ranges(file_str)
+    bef_aft = file_str[:ranges[-1][1]+14]
+
+    lines = bef_aft.split('\n')
+    in_eq = False
+    been_in_eq = False
+
+    section = r'\\[a-zA-Z]*section'
+
+    lines = bef_aft.split("\n")
+
 
     for line in lines:
-        # if this line is an index start storing it, or write it if we're done with the indexes
+
+        if 'begin{equation}' in line:
+            in_eq = True
+            been_in_eq = True
+
+        if 'end{equation}' in line:
+            updated.append(line)
+            in_eq = False
+
+
+        if in_eq:
+            updated.append(line)
+
+        else:
+            if not been_in_eq:
+                updated.append(line)
+            elif '\\index' in line or re.match(section, line) or line == '':
+                updated.append(line)
+
+
+        # if this line is an index start storing it,or write it if we're done with the indexes
         if IND_START in line:
             in_ind = True
             ind_str += line + "\n"
-            continue
 
-        elif in_ind:
+
+        if in_ind:
             in_ind = False
 
             # add a preceding newline if one is not already present
@@ -52,21 +82,20 @@ def index_spacing(file, out_file):
                 ind_str = "\n" + ind_str
 
             fullsplit = ind_str.split("\n")
-            updated.extend(fullsplit)
             ind_str = ""
+
         previous = line
-        updated.append(line)
+
 
     wrote = "\n".join(updated)
+    wrote = wrote + file_str[ranges[-1][1]+14:]
+
 
     # remove consecutive blank lines and blank lines between \index groups
     spaces_pat = re.compile(r'\n{2,}[ ]?\n+')
     wrote = spaces_pat.sub('\n\n', wrote)
     wrote = re.sub(r'\\index{(.*?)}\n\n\\index{(.*?)}', r'\\index{\1}\n\\index{\2}', wrote)
 
-    out = open(out_file, 'w')
-    out.write(wrote)
-    out.close()
-    return out
-# 4/26, look at chapter 16 and prevent converting the \ApellFiii into \ApellFii\iunit
+    return wrote
 
+#formatting(open('/home/ont1/DLMF/25.ZE/newMoritz').read())

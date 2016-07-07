@@ -10,6 +10,7 @@ try:
 except ImportError:
     izip = zip
 
+import math_mode
 import math_function
 import parentheses
 from utilities import writeout
@@ -46,17 +47,17 @@ def main():
 
     # Below: index_str writes to output file, math_string takes output file as input, and change_original
     # writes to the output based on the previous output file
-    index_str = math_function.index_spacing(fname, ofname)
-    my_string = math_function.math_string(ofname)
+    # print (math_mode.find_math_ranges(fname))
+    unchanged_math = math_function.math_string(fname)
+    math_string = remove_special(unchanged_math)
+    changed_math = math_function.change_original(fname,math_string)
+    formatted = math_function.formatting(changed_math)
 
-    math_string = remove_special(my_string)
-
-    writeout(ofname, math_function.change_original(ofname, math_string))
+    writeout(ofname, formatted)
 
 
 def remove_special(content):
     """Removes the excess pieces from the given content and returns the updated version as a string."""
-    print(content)
     counter = 0
     for function in content:
 
@@ -84,10 +85,6 @@ def remove_special(content):
         dollar_pat = re.compile(r'(?<!\\)\$')
 
         comment_str = ""
-        ind_str = ""
-
-        previous = ""
-        old = ""
 
         updated = []
 
@@ -95,25 +92,6 @@ def remove_special(content):
         for lnum, line in enumerate(lines):
 
             lnum += 1
-
-            # if this line is an index start storing it, or write it if we're done with the indexes
-            if IND_START in line:
-                in_ind = True
-                ind_str += line + "\n"
-                continue
-
-            elif in_ind:
-
-                in_ind = False
-
-                # add a preceding newline if one is not already present
-                if previous.strip() != "":
-                    ind_str = "\n" + ind_str
-
-                fullsplit = ind_str.split("\n")
-
-                updated.extend(fullsplit)
-                ind_str = ""
 
             # if this line marks the start of an equation, set the flag
             if EQ_START in line:
@@ -197,8 +175,6 @@ def remove_special(content):
 
                     continue
 
-            old = previous
-            previous = line
             updated.append(line)
 
         function = '\n'.join(updated)
